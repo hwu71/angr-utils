@@ -14,7 +14,7 @@ def plot_common(graph, fname, format="png", type=True):
     vis.set_output(DotOutput(fname, format=format))
     vis.process(graph)
 
-def plot_cfg(cfg, fname, format="png", state=None, asminst=False, vexinst=False, func_addr=None, remove_imports=True, remove_path_terminator=True, remove_simprocedures=False, debug_info=False, comments=True, color_depth=False):
+def plot_cfg(cfg, fname, format="png", state=None, asminst=False, vexinst=False, func_addr=None, remove_imports=True, remove_path_terminator=True, remove_simprocedures=False, debug_info=False, comments=True, color_depth=False, special_nodes=None):
     vis = AngrVisFactory().default_cfg_pipeline(cfg, asminst=asminst, vexinst=vexinst, comments=comments)
     if remove_imports:
         vis.add_transformer(AngrRemoveImports(cfg.project))
@@ -30,6 +30,8 @@ def plot_cfg(cfg, fname, format="png", state=None, asminst=False, vexinst=False,
     if color_depth:
         vis.add_clusterer(AngrCallstackKeyClusterer())
         vis.add_clusterer(ColorDepthClusterer(palette='greens'))
+    if special_nodes:
+        vis.add_node_annotator(AngrColorCFGNodes(special_nodes))
     vis.set_output(DotOutput(fname, format=format))    
     vis.process(cfg.graph) 
 
@@ -98,3 +100,14 @@ def plot_ddg_data(ddg_data, fname, format="png", project=None, asminst=False, ve
     vis.add_node_annotator(acd)
     vis.set_output(DotOutput(fname, format=format))
     vis.process(ddg_data)
+
+def plot_pdg(pdg, fname, format="png", project=None, directly_affected_stmts=None, indirectly_affected_stmts=None):
+    vis = AngrVisFactory().default_common_graph_pipeline()
+    if project:
+        vis.add_content(AngrAsm(project))
+        vis.add_content(AngrVex(project))
+    if directly_affected_stmts is not None and indirectly_affected_stmts is not None:
+        vis.add_node_annotator(AngrColorPDGNodes(project, directly_affected_stmts, indirectly_affected_stmts))
+    vis.add_edge_annotator(AngrColorPDGEdges(project))
+    vis.set_output(DotOutput(fname, format=format))
+    vis.process(pdg)
