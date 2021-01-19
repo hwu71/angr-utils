@@ -111,3 +111,87 @@ def plot_pdg(pdg, fname, format="png", project=None, directly_affected_stmts=Non
     vis.add_edge_annotator(AngrColorPDGEdges(project))
     vis.set_output(DotOutput(fname, format=format))
     vis.process(pdg)
+    
+def plot_affected_stmts_in_cfg(cfg, fname, format="png", state=None, 
+                               asminst=False, vexinst=True, func_addr=None, 
+                               remove_imports=True, remove_path_terminator=True,
+                               remove_simprocedures=False, debug_info=False, 
+                               comments=True, color_depth=False, 
+                               directly_affected_stmts=None, indirectly_affected_stmts=None):
+    if directly_affected_stmts is None and indirectly_affected_stmts is None:
+        print("<directly_affected_stmts> and <indirectly_affected_stmts> are required.")
+        return 
+    if vexinst is not True:
+        print("<vexinst> must set to True")
+        return
+    directly_affected_stmts_dict = {}
+    indirectly_affected_stmts_dict = {}
+    
+    if directly_affected_stmts is not None:
+        for (irsb, stmt_idx) in directly_affected_stmts:
+            if irsb.addr not in directly_affected_stmts_dict:
+                directly_affected_stmts_dict[irsb.addr] = []
+            directly_affected_stmts_dict[irsb.addr].append(stmt_idx)
+
+    if indirectly_affected_stmts is not None:
+        for (irsb, stmt_idx) in indirectly_affected_stmts:
+            if irsb.addr not in indirectly_affected_stmts_dict:
+                indirectly_affected_stmts_dict[irsb.addr] = []
+            indirectly_affected_stmts_dict[irsb.addr].append(stmt_idx)
+            
+    vis = AngrVisFactory().default_cfg_pipeline(cfg, asminst=asminst, vexinst=vexinst, comments=comments, 
+                                                directly_affected_stmts_dict=directly_affected_stmts_dict, 
+                                                indirectly_affected_stmts_dict=indirectly_affected_stmts_dict)
+    if remove_imports:
+        vis.add_transformer(AngrRemoveImports(cfg.project))
+    if remove_simprocedures:
+        vis.add_transformer(AngrRemoveSimProcedures())
+    if func_addr:
+        vis.add_transformer(AngrFilterNodes(lambda node: node.obj.function_address in func_addr and func_addr[node.obj.function_address]))
+    if debug_info:
+        vis.add_content(AngrCFGDebugInfo())
+    if state:
+        vis.add_edge_annotator(AngrPathAnnotator(state))
+        vis.add_node_annotator(AngrPathAnnotator(state))
+    if color_depth:
+        vis.add_clusterer(AngrCallstackKeyClusterer())
+        vis.add_clusterer(ColorDepthClusterer(palette='greens'))
+    vis.set_output(DotOutput(fname, format=format))    
+    vis.process(cfg.graph)
+    
+def plot_affected_ins_in_cfg(cfg, fname, format="png", state=None, 
+                               asminst=True, vexinst=False, func_addr=None, 
+                               remove_imports=True, remove_path_terminator=True,
+                               remove_simprocedures=False, debug_info=False, 
+                               comments=True, color_depth=False, 
+                               directly_affected_ins_addrs=None, indirectly_affected_ins_addrs=None):
+    if directly_affected_ins_addrs is None and indirectly_affected_ins_addrs is None:
+        print("<directly_affected_ins_addrs> and <indirectly_affected_ins_addrs> are required.")
+        return 
+    
+    if asminst is not True:
+        print("<asminst> must set to True")
+        return
+    
+    print("\ndirectly_affected_ins_addrs:", directly_affected_ins_addrs)
+    print("\nindirectly_affected_ins_addrs:", indirectly_affected_ins_addrs)
+
+    vis = AngrVisFactory().default_cfg_pipeline(cfg, asminst=asminst, vexinst=vexinst, comments=comments, 
+                                                directly_affected_ins_addrs=directly_affected_ins_addrs, 
+                                                indirectly_affected_ins_addrs=indirectly_affected_ins_addrs)
+    if remove_imports:
+        vis.add_transformer(AngrRemoveImports(cfg.project))
+    if remove_simprocedures:
+        vis.add_transformer(AngrRemoveSimProcedures())
+    if func_addr:
+        vis.add_transformer(AngrFilterNodes(lambda node: node.obj.function_address in func_addr and func_addr[node.obj.function_address]))
+    if debug_info:
+        vis.add_content(AngrCFGDebugInfo())
+    if state:
+        vis.add_edge_annotator(AngrPathAnnotator(state))
+        vis.add_node_annotator(AngrPathAnnotator(state))
+    if color_depth:
+        vis.add_clusterer(AngrCallstackKeyClusterer())
+        vis.add_clusterer(ColorDepthClusterer(palette='greens'))
+    vis.set_output(DotOutput(fname, format=format))    
+    vis.process(cfg.graph)
